@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIPANGAN — Sistem Pemantauan Harga Pangan Kota Ambon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --ink:#241f1a;
+    --ink-soft:#5b5349;
+    --paper:#f4f2e9;
+    --paper-raised:#fffdf8;
+    --hijau:#1f4736;
+    --hijau-deep:#102a1f;
+    --hijau-soft:#3c6b53;
+    --cabai:#a5311f;
+    --cabai-soft:#c7593f;
+    --pala:#b8842f;
+    --line:#d7dbce;
+    --line-soft:#e7ebe0;
+    --good:#3f6b4a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 20px 64px;}
+
+  /* Masthead */
+  .masthead{
+    background:linear-gradient(180deg,var(--hijau) 0%,var(--hijau-deep) 100%);
+    color:#f2ece0;
+    padding:30px 20px 26px;
+    margin-bottom:0;
+  }
+  .masthead-inner{max-width:900px;margin:0 auto;}
+  .masthead-loc{
+    font-size:12.5px;
+    letter-spacing:.02em;
+    color:#b6c9ba;
+    margin-bottom:10px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .masthead-loc svg{width:12px;height:12px;flex:none;}
+  h1.brand{
+    font-family:'Source Serif 4',serif;
+    font-weight:700;
+    font-size:38px;
+    margin:0 0 6px;
+    letter-spacing:-.01em;
+  }
+  .masthead p{
+    margin:0;
+    font-size:15px;
+    color:#d8cfbd;
+    max-width:52ch;
+  }
+
+  /* Controls */
+  .controls{
+    background:var(--paper-raised);
+    border-bottom:1px solid var(--line);
+    padding:18px 0 0;
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  .control-row{max-width:900px;margin:0 auto;padding:0 20px 18px;}
+  .control-label{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+    display:block;
+  }
+  .select-row{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  .select-group{flex:1 1 220px;min-width:180px;}
+  .select-shell{
+    position:relative;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    border-left:3px solid var(--hijau);
+    transition:border-color .15s ease;
+  }
+  .select-shell:focus-within{border-color:var(--hijau);}
+  .select-shell::after{
+    content:'';
+    position:absolute;
+    right:14px;
+    top:50%;
+    width:8px;
+    height:8px;
+    border-right:2px solid var(--ink-soft);
+    border-bottom:2px solid var(--ink-soft);
+    transform:translateY(-65%) rotate(45deg);
+    pointer-events:none;
+  }
+  select{
+    appearance:none;
+    -webkit-appearance:none;
+    -moz-appearance:none;
+    width:100%;
+    border:none;
+    background:transparent;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:15px;
+    color:var(--ink);
+    padding:11px 34px 11px 13px;
+    cursor:pointer;
+  }
+  select:focus{outline:none;}
+  select option{color:var(--ink);}
+
+  /* Sections */
+  section{padding:34px 0 6px;border-bottom:1px solid var(--line-soft);}
+  section:last-of-type{border-bottom:none;}
+  .section-head{margin-bottom:18px;}
+  .section-head h2{
+    font-family:'Source Serif 4',serif;
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .section-head .sub{font-size:13.5px;color:var(--ink-soft);}
+
+  /* Daily section layout */
+  .daily-grid{
+    display:grid;
+    grid-template-columns:1fr 210px;
+    gap:28px;
+    align-items:stretch;
+  }
+  .chart-box{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    padding:16px 16px 8px;
+  }
+  .chart-box canvas{max-height:280px;}
+  .stat-rail{display:flex;flex-direction:column;}
+  .stat{
+    padding:12px 0;
+    border-bottom:1px solid var(--line-soft);
+  }
+  .stat:first-child{padding-top:0;}
+  .stat:last-child{border-bottom:none;}
+  .stat .k{font-size:12px;color:var(--ink-soft);margin-bottom:3px;}
+  .stat .v{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:19px;
+    font-weight:500;
+  }
+  .stat .v.flag-up{color:var(--cabai);}
+  .stat .v.flag-down{color:var(--good);}
+
+  .narrative{
+    margin-top:16px;
+    font-size:14px;
+    color:var(--ink-soft);
+    padding:14px 16px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-left:3px solid var(--pala);
+  }
+  .narrative strong{color:var(--ink);font-weight:600;}
+
+  .empty-state{
+    padding:38px 16px;
+    text-align:center;
+    background:var(--paper-raised);
+    border:1px dashed var(--line);
+    color:var(--ink-soft);
+    font-size:14px;
+  }
+  .empty-state .big{
+    font-family:'Source Serif 4',serif;
+    font-size:17px;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+
+  /* Monthly section */
+  .monthly-box{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    padding:16px;
+  }
+  .monthly-box canvas{max-height:230px;}
+  .legend-note{
+    display:flex;
+    gap:18px;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:10px;
+  }
+  .legend-note span{display:flex;align-items:center;gap:6px;}
+  .legend-note .sw{width:10px;height:10px;flex:none;}
+
+  footer{
+    padding:26px 0 0;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+
+  @media (max-width:640px){
+    h1.brand{font-size:30px;}
+    .daily-grid{grid-template-columns:1fr;}
+    .stat-rail{
+      flex-direction:row;
+      flex-wrap:wrap;
+      gap:0 22px;
+    }
+    .stat{border-bottom:none;padding:10px 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-loc">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-7.58 7-12A7 7 0 0 0 5 9c0 4.42 7 12 7 12z"/><circle cx="12" cy="9" r="2.4"/></svg>
+      Kota Ambon · Maluku
+    </div>
+    <h1 class="brand">SIPANGAN</h1>
+    <p>Sistem Pemantauan Harga Pangan — memantau harga harian empat komoditas prioritas di tingkat konsumen, Dinas Pertanian dan Ketahanan Pangan Kota Ambon.</p>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="control-row select-row">
+    <div class="select-group">
+      <label class="control-label" for="commoditySelect">Pilih komoditas</label>
+      <div class="select-shell" id="commoditySelectShell">
+        <select id="commoditySelect"></select>
+      </div>
+    </div>
+    <div class="select-group">
+      <label class="control-label" for="monthSelect">Pilih bulan</label>
+      <div class="select-shell">
+        <select id="monthSelect"></select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section>
+    <div class="section-head">
+      <h2 id="dailyTitle">Tren harian</h2>
+      <div class="sub" id="dailySub">Pergerakan harga per hari, tingkat konsumen</div>
+    </div>
+    <div id="dailyContent"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2 id="monthlyTitle">Tren bulanan</h2>
+      <div class="sub">Rata-rata harga Agustus–Desember 2026</div>
+    </div>
+    <div class="monthly-box">
+      <canvas id="monthlyChart" height="90"></canvas>
+    </div>
+    <div class="legend-note">
+      <span><span class="sw" style="background:var(--hijau-soft);"></span>Rata-rata harga per bulan</span>
+      <span>Garis terputus menandakan bulan yang datanya belum tercatat</span>
+    </div>
+  </section>
+
+  <footer>
+    <span id="dataSource">Sumber: Dinas Pertanian dan Ketahanan Pangan Kota Ambon</span>
+    <span id="lastUpdated"></span>
+  </footer>
+
+</div>
+
+<script>
+// ---------- DATA (diambil dari GRAFIK_HARGA_PANGAN_KOTA_AMBON.xlsx) ----------
+const DATA = {"agustus": [{"hari": 1, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 2, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 3, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 4, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 5, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 6, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 7, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 8, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 9, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 10, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 11, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 12, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 13, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 14, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 15, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 80000, "cabai_rawit_merah": 90000}, {"hari": 16, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 90000, "cabai_rawit_merah": 83333}, {"hari": 17, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 90000, "cabai_rawit_merah": 93333}, {"hari": 18, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 90000, "cabai_rawit_merah": 96667}, {"hari": 19, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 90000, "cabai_rawit_merah": 96667}, {"hari": 20, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 83333, "cabai_rawit_merah": 93333}, {"hari": 21, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 90000, "cabai_rawit_merah": 100000}, {"hari": 22, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 100000, "cabai_rawit_merah": 100000}, {"hari": 23, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 100000, "cabai_rawit_merah": 100000}, {"hari": 24, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 100000, "cabai_rawit_merah": 116667}, {"hari": 25, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 100000, "cabai_rawit_merah": 120000}, {"hari": 26, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 120000, "cabai_rawit_merah": 130000}, {"hari": 27, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 120000, "cabai_rawit_merah": 140000}, {"hari": 28, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 123333, "cabai_rawit_merah": 140000}, {"hari": 29, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 120000, "cabai_rawit_merah": 130000}, {"hari": 30, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 130000, "cabai_rawit_merah": 140000}, {"hari": 31, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 130000, "cabai_rawit_merah": 140000}], "september": [{"hari": 1, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 106667, "cabai_rawit_merah": 126667}, {"hari": 2, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 93333, "cabai_rawit_merah": 113333}, {"hari": 3, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 90000, "cabai_rawit_merah": 106667}, {"hari": 4, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 100000, "cabai_rawit_merah": 120000}, {"hari": 5, "bawang_merah": 40000, "bawang_putih": 40000, "cabai_merah_keriting": 100000, "cabai_rawit_merah": 120000}], "oktober": [], "november": [], "desember": []};
+
+const COMMODITIES = [
+  {key:'bawang_merah', label:'Bawang Merah', color:'#b8842f'},
+  {key:'bawang_putih', label:'Bawang Putih', color:'#5b7d6b'},
+  {key:'cabai_merah_keriting', label:'Cabai Merah Keriting', color:'#a5311f'},
+  {key:'cabai_rawit_merah', label:'Cabai Rawit Merah', color:'#7a2f5c'},
+];
+const MONTHS = [
+  {key:'agustus', label:'Agustus'},
+  {key:'september', label:'September'},
+  {key:'oktober', label:'Oktober'},
+  {key:'november', label:'November'},
+  {key:'desember', label:'Desember'},
+];
+
+let state = { commodity:'cabai_rawit_merah', month:'september' };
+let dailyChart = null, monthlyChart = null;
+
+const rupiah = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+
+function monthHasData(mkey){ return DATA[mkey] && DATA[mkey].length > 0; }
+
+function buildSelects(){
+  const cSel = document.getElementById('commoditySelect');
+  cSel.innerHTML = COMMODITIES.map(c=>`<option value="${c.key}">${c.label}</option>`).join('');
+  cSel.value = state.commodity;
+  cSel.addEventListener('change', e=>{ state.commodity = e.target.value; render(); });
+
+  const mSel = document.getElementById('monthSelect');
+  mSel.addEventListener('change', e=>{ state.month = e.target.value; render(); });
+}
+
+function refreshMonthOptions(){
+  const mSel = document.getElementById('monthSelect');
+  mSel.innerHTML = MONTHS.map(m=>
+    `<option value="${m.key}">${m.label} 2026${monthHasData(m.key) ? '' : ' — belum ada data'}</option>`
+  ).join('');
+  mSel.value = state.month;
+}
+
+function computeStats(rows, key){
+  const vals = rows.map(r=>r[key]);
+  const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+  const max = Math.max(...vals);
+  const min = Math.min(...vals);
+  const sd = Math.sqrt(vals.reduce((a,b)=>a+(b-avg)*(b-avg),0)/vals.length);
+  const cv = avg ? (sd/avg)*100 : 0;
+  return {avg,max,min,cv,first:vals[0],last:vals[vals.length-1]};
+}
+
+function narrativeFor(commodityLabel, monthLabel, stats){
+  const delta = stats.last - stats.first;
+  let trend, verb;
+  if (Math.abs(delta) < stats.avg*0.01){ trend='relatif stabil'; verb='tidak banyak berubah'; }
+  else if (delta > 0){ trend='cenderung meningkat'; verb='bergerak naik'; }
+  else { trend='cenderung menurun'; verb='bergerak turun'; }
+  return `Selama ${monthLabel}, harga <strong>${commodityLabel}</strong> di tingkat konsumen ${trend}, dari ${rupiah(stats.first)} menjadi ${rupiah(stats.last)} per kg. Volatilitas harga tercatat sebesar ${stats.cv.toFixed(1)}%, dengan garis grafik ${verb} sepanjang periode ini.`;
+}
+
+function render(){
+  refreshMonthOptions();
+  document.getElementById('commoditySelect').value = state.commodity;
+
+  const commodity = COMMODITIES.find(c=>c.key===state.commodity);
+  const month = MONTHS.find(m=>m.key===state.month);
+  document.getElementById('commoditySelectShell').style.borderLeftColor = commodity.color;
+  const rows = DATA[state.month];
+
+  document.getElementById('dailyTitle').textContent = `Tren harian — ${commodity.label}`;
+  document.getElementById('dailySub').textContent = `${month.label} 2026 · tingkat konsumen · Rp/kg`;
+
+  const content = document.getElementById('dailyContent');
+  content.innerHTML = '';
+
+  if (!rows || rows.length === 0){
+    content.innerHTML = `<div class="empty-state"><div class="big">Data ${month.label} belum tersedia</div>Belum ada pencatatan harga untuk bulan ini. Grafik akan tampil otomatis begitu data harian diinput.</div>`;
+    if (dailyChart){ dailyChart.destroy(); dailyChart = null; }
+  } else {
+    content.innerHTML = `
+      <div class="daily-grid">
+        <div class="chart-box"><canvas id="dailyChart"></canvas></div>
+        <div class="stat-rail" id="statRail"></div>
+      </div>
+      <div class="narrative" id="narrative"></div>
+    `;
+    const stats = computeStats(rows, state.commodity);
+    const rail = document.getElementById('statRail');
+    const flagAvg = stats.last > stats.first ? 'flag-up' : stats.last < stats.first ? 'flag-down' : '';
+    rail.innerHTML = `
+      <div class="stat"><div class="k">Rata-rata</div><div class="v">${rupiah(stats.avg)}</div></div>
+      <div class="stat"><div class="k">Tertinggi</div><div class="v">${rupiah(stats.max)}</div></div>
+      <div class="stat"><div class="k">Terendah</div><div class="v">${rupiah(stats.min)}</div></div>
+      <div class="stat"><div class="k">Volatilitas (CV)</div><div class="v ${flagAvg}">${stats.cv.toFixed(1)}%</div></div>
+    `;
+    document.getElementById('narrative').innerHTML = narrativeFor(commodity.label, month.label, stats);
+
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    if (dailyChart) dailyChart.destroy();
+    dailyChart = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels: rows.map(r=>r.hari),
+        datasets:[{
+          data: rows.map(r=>r[state.commodity]),
+          borderColor: commodity.color,
+          backgroundColor: commodity.color + '22',
+          fill:true,
+          tension:.25,
+          pointRadius: rows.length > 20 ? 0 : 3,
+          pointBackgroundColor: commodity.color,
+          borderWidth:2,
+        }]
+      },
+      options:{
+        responsive:true,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{ label: c => rupiah(c.parsed.y), title: c => `Tanggal ${c[0].label} ${month.label}` } } },
+        scales:{
+          x:{ title:{display:true, text:'Tanggal', font:{family:"'IBM Plex Sans'"}}, grid:{display:false} },
+          y:{ ticks:{ callback:v=>'Rp'+(v/1000)+'rb' }, grid:{color:'#eae2cf'} }
+        }
+      }
+    });
+  }
+
+  // Monthly chart — garis, senada dengan grafik harian
+  document.getElementById('monthlyTitle').textContent = `Tren bulanan — ${commodity.label}`;
+  const monthlyAverages = MONTHS.map(m => {
+    const r = DATA[m.key];
+    if (!r || r.length===0) return null;
+    return r.reduce((a,b)=>a+b[state.commodity],0)/r.length;
+  });
+  const mctx = document.getElementById('monthlyChart').getContext('2d');
+  if (monthlyChart) monthlyChart.destroy();
+  monthlyChart = new Chart(mctx, {
+    type:'line',
+    data:{
+      labels: MONTHS.map(m=>m.label),
+      datasets:[{
+        data: monthlyAverages,
+        borderColor: commodity.color,
+        backgroundColor: commodity.color + '22',
+        fill:true,
+        tension:.25,
+        spanGaps:false,
+        borderWidth:2,
+        pointRadius: MONTHS.map(m => m.key===state.month ? 7 : 4),
+        pointBackgroundColor: MONTHS.map(m => m.key===state.month ? commodity.color : commodity.color + 'aa'),
+        pointBorderColor:'#fffdf8',
+        pointBorderWidth:2,
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label: c => c.raw===null ? 'Belum ada data' : rupiah(c.raw) } } },
+      scales:{
+        x:{ grid:{display:false} },
+        y:{ ticks:{ callback:v=>'Rp'+(v/1000)+'rb' }, grid:{color:'#eae2cf'} }
+      }
+    }
+  });
+}
+
+// ---------- AUTO-UPDATE DARI GOOGLE SHEETS (opsional) ----------
+// Isi link CSV hasil "Publish to web" per sheet bulan di sini untuk mengaktifkan
+// pembaruan otomatis. Caranya: buka Google Sheets sumber -> File -> Share ->
+// Publish to web -> pilih sheet bulan yang sesuai -> format CSV -> Publish,
+// lalu centang "Automatically republish when changes are made". Salin link
+// yang dihasilkan (format: https://docs.google.com/spreadsheets/d/e/xxx/pub?gid=xxx&single=true&output=csv)
+// ke variabel di bawah ini. Kosongkan ('') kalau belum mau dipakai — dashboard
+// akan tetap jalan dengan data statis di atas sebagai cadangan.
+const SHEET_CSV_URLS = {
+  agustus: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7mOXGaN48E0n7dWu3nNr4qXIiMlWepCXJN-JyZQfXyDGHs1dvc9lPt-HyFmRgRQ/pub?gid=326859931&single=true&output=csv',
+  september: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7mOXGaN48E0n7dWu3nNr4qXIiMlWepCXJN-JyZQfXyDGHs1dvc9lPt-HyFmRgRQ/pub?gid=570414468&single=true&output=csv',
+  oktober: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7mOXGaN48E0n7dWu3nNr4qXIiMlWepCXJN-JyZQfXyDGHs1dvc9lPt-HyFmRgRQ/pub?gid=2105967131&single=true&output=csv',
+  november: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7mOXGaN48E0n7dWu3nNr4qXIiMlWepCXJN-JyZQfXyDGHs1dvc9lPt-HyFmRgRQ/pub?gid=34948815&single=true&output=csv',
+  desember: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7mOXGaN48E0n7dWu3nNr4qXIiMlWepCXJN-JyZQfXyDGHs1dvc9lPt-HyFmRgRQ/pub?gid=798917556&single=true&output=csv',
+};
+const AUTO_REFRESH_MINUTES = 5; // jeda cek ulang otomatis selama halaman tetap terbuka
+
+function parseMonthCsv(csvText){
+  const parsed = Papa.parse(csvText.trim(), { skipEmptyLines:true });
+  const rows = [];
+  parsed.data.forEach(cols=>{
+    const no = parseInt(cols[0], 10);
+    const bm = parseFloat((cols[2]||'').toString().replace(/[^\d.-]/g,''));
+    const bp = parseFloat((cols[3]||'').toString().replace(/[^\d.-]/g,''));
+    const cmk = parseFloat((cols[4]||'').toString().replace(/[^\d.-]/g,''));
+    const crm = parseFloat((cols[5]||'').toString().replace(/[^\d.-]/g,''));
+    if (!Number.isInteger(no) || no < 1 || no > 31) return;
+    if ([bm,bp,cmk,crm].some(v => !v || isNaN(v))) return;
+    rows.push({ hari:no, bawang_merah:bm, bawang_putih:bp, cabai_merah_keriting:cmk, cabai_rawit_merah:crm });
+  });
+  return rows;
+}
+
+async function fetchLiveData(){
+  const activeUrls = Object.entries(SHEET_CSV_URLS).filter(([,url]) => url && url.trim());
+  if (activeUrls.length === 0) return false; // belum dikonfigurasi -> pakai data statis
+
+  let anySuccess = false;
+  await Promise.all(activeUrls.map(async ([monthKey, url])=>{
+    try{
+      const res = await fetch(url, { cache:'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const rows = parseMonthCsv(text);
+      if (rows.length){ DATA[monthKey] = rows; anySuccess = true; }
+    }catch(err){
+      console.warn('Gagal ambil data live untuk', monthKey, err);
+    }
+  }));
+  return anySuccess;
+}
+
+async function refreshAndRender(isAutoRefresh){
+  const live = await fetchLiveData();
+  const src = document.getElementById('dataSource');
+  const stamp = document.getElementById('lastUpdated');
+  if (live){
+    src.textContent = 'Sumber: Google Sheets (data langsung)';
+  } else if (Object.values(SHEET_CSV_URLS).some(u=>u && u.trim())){
+    src.textContent = 'Sumber: Google Sheets (gagal terhubung, menampilkan data terakhir)';
+  } else {
+    src.textContent = 'Sumber: Dinas Pertanian dan Ketahanan Pangan Kota Ambon';
+  }
+  stamp.textContent = (isAutoRefresh ? 'Diperbarui otomatis: ' : 'Ditampilkan: ') +
+    new Date().toLocaleString('id-ID', {day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  render();
+}
+
+Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+Chart.defaults.font.size = 12.5;
+Chart.defaults.color = '#5b5349';
+
+buildSelects();
+refreshAndRender(false);
+setInterval(()=>refreshAndRender(true), AUTO_REFRESH_MINUTES * 60 * 1000);
+</script>
+</body>
+</html>
